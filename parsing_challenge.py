@@ -18,7 +18,7 @@ def main(argv):
     # opening file
     with open('parsing_challenge.json') as json_data:
         data = json.load(json_data)
-    if len(argv) > 1:
+    if len(argv)>1:
         # if we want to parse part of data
         for i in range(int(argv[0]), int(argv[1])):
             answer_sample.append(
@@ -42,7 +42,7 @@ def main(argv):
     # creating new file with edited data
     with open('data.json', 'w') as outfile:
         json.dump(answer_sample, outfile)
-    return 2
+    pass
 
 
 def find_date(one_value):
@@ -50,9 +50,12 @@ def find_date(one_value):
         # trying to find data in row
         dates_found = search_dates(one_value['address'])
     except ZeroDivisionError:
-        # fixing one of error in library (when there is "of America", library finds an error)
-        one_value['address'] = one_value['address'].replace('of America', "FixedError")
+        # fixing one of error in library (when there is "am", library finds an error)
+        one_value['address'] = one_value['address'].replace('am', "FixedError")
+        one_value['address'] = one_value['address'].replace('Am', "FixedError")
         dates_found = search_dates(one_value['address'])
+
+
 
     if dates_found is not None:
         # if we find any date - completing date row  and rank
@@ -79,7 +82,7 @@ def find_date(one_value):
 
 def find_address(one_value):
     # replacing back "of America" that was deleted to prevent library failure
-    one_value['address'] = one_value['address'].replace("FixedError", 'of America')
+    one_value['address'] = one_value['address'].replace("FixedError", 'am')
     # trying to find location of address
     location = geolocator.geocode(one_value['address'], addressdetails=True, language='en')
     if location is not None:
@@ -140,3 +143,4 @@ def analysis_2():
 
 if __name__ == "__main__":
    main(sys.argv[1:])
+
