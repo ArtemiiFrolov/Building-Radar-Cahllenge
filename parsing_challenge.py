@@ -7,7 +7,7 @@ import re
 import matplotlib.pyplot as plt
 
 # lists, dictionaries and stuff
-geolocator = Nominatim()
+geolocator = Nominatim(timeout=10)
 pattern_1 = r"(\d{4})-(\d{2})-(\d{2})"
 pattern_2 = r"(\d{2})/(\d{2})/(\d{4})"
 ranking_counter = {'day':0, 'month': 0, 'year': 0, 'nd': 0, 'na': 0, 'fa':0, 'pa':0, 'ua': 0}
@@ -87,34 +87,38 @@ def find_date(one_value):
 
 
 def find_address(one_value):
-    # replacing back "of America" that was deleted to prevent library failure
+    # replacing back "am" that was deleted to prevent library failure
     one_value['address'] = one_value['address'].replace("FixedError", 'am')
-    # trying to find location of address
-    location = geolocator.geocode(one_value['address'], addressdetails=True, language='en')
-    if location is not None:
-        # if we found any location - trying to check road, city and country and completing rankings
-        counter = 0
-        if 'road' in location.raw['address']:
-            one_value['road'] = location.raw['address']['road']
-            counter += 1
-        if 'city' in location.raw['address']:
-            one_value['city'] = location.raw['address']['city']
-            counter += 1
-        if 'country' in location.raw['address']:
-            one_value['country'] = location.raw['address']['country']
-            counter += 1
-        if counter == 3:
-            # if we have all information - complete rank as full address
-            one_value['ranking-address'] = "full address"
-            ranking_counter['fa'] += 1
+    if len(one_value['address']) > 1:
+        # trying to find location of address
+        try:
+            location = geolocator.geocode(one_value['address'], addressdetails=True, language='en')
+        except:
+            location = None
+        if location is not None:
+            # if we found any location - trying to check road, city and country and completing rankings
+            counter = 0
+            if 'road' in location.raw['address']:
+                one_value['road'] = location.raw['address']['road']
+                counter += 1
+            if 'city' in location.raw['address']:
+                one_value['city'] = location.raw['address']['city']
+                counter += 1
+            if 'country' in location.raw['address']:
+                one_value['country'] = location.raw['address']['country']
+                counter += 1
+            if counter == 3:
+                # if we have all information - complete rank as full address
+                one_value['ranking-address'] = "full address"
+                ranking_counter['fa'] += 1
+            else:
+                # if we don't  have all information - complete rank as part-known address
+                one_value['ranking-address'] = "part-known address"
+                ranking_counter['pa'] += 1
         else:
-            # if we don't  have all information - complete rank as part-known address
-            one_value['ranking-address'] = "part-known address"
-            ranking_counter['pa'] += 1
-    elif len(one_value['address']) > 1:
-        # if we don't find any address, but have information, complete rank as unknown address
-        one_value['ranking-address'] = "unknown address"
-        ranking_counter['ua'] += 1
+            # if we don't find any address, but have information, complete rank as unknown address
+            one_value['ranking-address'] = "unknown address"
+            ranking_counter['ua'] += 1
     else:
         # if we there is any information,  complete rank as no address
         one_value['ranking-address'] = "no address"
