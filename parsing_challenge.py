@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 
 # lists, dictionaries and stuff
 geolocator = Nominatim()
-pattern = r"(\d{4})-(\d{2})-(\d{2})"
+pattern_1 = r"(\d{4})-(\d{2})-(\d{2})"
+pattern_2 = r"(\d{2})/(\d{2})/(\d{4})"
 ranking_counter = {'day':0, 'month': 0, 'year': 0, 'nd': 0, 'na': 0, 'fa':0, 'pa':0, 'ua': 0}
 answer_sample = []
 dates_found = []
@@ -46,16 +47,14 @@ def main(argv):
 
 
 def find_date(one_value):
+    # fixing one of error in library (when there is "am", library finds an error)
+    one_value['address'] = one_value['address'].replace('am', "FixedError")
+    one_value['address'] = one_value['address'].replace('Am', "FixedError")
     try:
         # trying to find data in row
         dates_found = search_dates(one_value['address'])
     except ZeroDivisionError:
-        # fixing one of error in library (when there is "am", library finds an error)
-        one_value['address'] = one_value['address'].replace('am', "FixedError")
-        one_value['address'] = one_value['address'].replace('Am', "FixedError")
-        dates_found = search_dates(one_value['address'])
-
-
+        dates_found = None
 
     if dates_found is not None:
         # if we find any date - completing date row  and rank
@@ -70,11 +69,18 @@ def find_date(one_value):
         one_value['ranking'] = "no date"
         ranking_counter['nd'] += 1
         # checking exception of library - it doesnt find date in this format "2004-12-31T00:00:00Z"
-        tmp = re.search(pattern, one_value['address'])
+        tmp = re.search(pattern_1, one_value['address'])
         if tmp is not None:
             # if he have date in given format - completing date row and rank
             one_value['ranking'] = 'day'
             one_value['date'] = '{}-{}-{}'.format(tmp.group(1), tmp.group(2), tmp.group(3))
+            ranking_counter['day'] += 1
+            ranking_counter['nd'] -= 1
+        tmp = re.search(pattern_2, one_value['address'])
+        if tmp is not None:
+            # if he have date in given format - completing date row and rank
+            one_value['ranking'] = 'day'
+            one_value['date'] = '{}-{}-{}'.format(tmp.group(3), tmp.group(1), tmp.group(2))
             ranking_counter['day'] += 1
             ranking_counter['nd'] -= 1
     return one_value
