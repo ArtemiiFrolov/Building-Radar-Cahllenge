@@ -55,15 +55,14 @@ def find_date(one_value):
         dates_found = search_dates(one_value['address'])
     except ZeroDivisionError:
         dates_found = None
-
     if dates_found is not None:
         # if we find any date - completing date row  and rank
-        one_value['date'] = dates_found[0][1].strftime("%Y-%m-%d")
-        rank = dateparser.date.DateDataParser().get_date_data(dates_found[0][0])
+        one_value['date'] = dates_found[-1][1].strftime("%Y-%m-%d")
+        rank = dateparser.date.DateDataParser().get_date_data(dates_found[-1][0])
         one_value['ranking'] = rank['period']
         ranking_counter[rank['period']] += 1
         # cut date from orgignal string to have only address
-        one_value['address'] = one_value['address'].replace(dates_found[0][0], "")
+        one_value['address'] = one_value['address'].replace(dates_found[-1][0], "")
     else:
         # if we don't find any date - completing rankings
         one_value['ranking'] = "no date"
@@ -76,6 +75,7 @@ def find_date(one_value):
             one_value['date'] = '{}-{}-{}'.format(tmp.group(1), tmp.group(2), tmp.group(3))
             ranking_counter['day'] += 1
             ranking_counter['nd'] -= 1
+        # checking exception of library - it doesnt find date in this format "mm/dd/yyyy"
         tmp = re.search(pattern_2, one_value['address'])
         if tmp is not None:
             # if he have date in given format - completing date row and rank
