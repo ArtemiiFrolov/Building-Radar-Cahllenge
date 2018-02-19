@@ -5,12 +5,15 @@ import datetime
 from geopy.geocoders import Nominatim
 import re
 import matplotlib.pyplot as plt
+import numpy as np
 
 # lists, dictionaries and stuff
 geolocator = Nominatim(timeout=10)
 pattern_1 = r"(\d{4})-(\d{2})-(\d{2})"
 pattern_2 = r"(\d{2})/(\d{2})/(\d{4})"
 ranking_counter = {'day':0, 'month': 0, 'year': 0, 'nd': 0, 'na': 0, 'fa':0, 'pa':0, 'ua': 0}
+countries = {}
+cities = {}
 answer_sample = []
 dates_found = []
 
@@ -37,12 +40,23 @@ def main(argv):
         # finding address in every row of answer_sample and rank it
         i = find_address(i)
         print(i)
-    # graphics based on rankings
-    analysis_1()
-    analysis_2()
+
     # creating new file with edited data
     with open('data.json', 'w') as outfile:
         json.dump(answer_sample, outfile)
+    with open('additional_data1.json', 'w') as outfile:
+        json.dump(ranking_counter, outfile)
+        json.dump(countries, outfile)
+        json.dump(cities, outfile)
+    #with open('additional_data2.json', 'w') as outfile:
+
+   # with open('additional_data3.json', 'w') as outfile:
+
+
+    # graphics based on rankings
+    analysis_days()
+    analysis_addresses()
+    analysis_countries()
     pass
 
 
@@ -59,8 +73,9 @@ def find_date(one_value):
         # if we find any date - completing date row  and rank
         one_value['date'] = dates_found[-1][1].strftime("%Y-%m-%d")
         rank = dateparser.date.DateDataParser().get_date_data(dates_found[-1][0])
-        one_value['ranking'] = rank['period']
-        ranking_counter[rank['period']] += 1
+        if rank['period'] in one_value['ranking']:
+            one_value['ranking'] = rank['period']
+            ranking_counter[rank['period']] += 1
         # cut date from orgignal string to have only address
         one_value['address'] = one_value['address'].replace(dates_found[-1][0], "")
     else:
@@ -104,9 +119,17 @@ def find_address(one_value):
             if 'city' in location.raw['address']:
                 one_value['city'] = location.raw['address']['city']
                 counter += 1
+                if location.raw['address']['city'] in countries:
+                    cities[location.raw['address']['city']] += 1
+                else:
+                    cities[location.raw['address']['city']] = 1
             if 'country' in location.raw['address']:
                 one_value['country'] = location.raw['address']['country']
                 counter += 1
+                if location.raw['address']['country'] in countries:
+                    countries[location.raw['address']['country']] += 1
+                else:
+                    countries[location.raw['address']['country']] = 1
             if counter == 3:
                 # if we have all information - complete rank as full address
                 one_value['ranking-address'] = "full address"
@@ -126,7 +149,7 @@ def find_address(one_value):
     return one_value
 
 
-def analysis_1():
+def analysis_days():
     # pie-graphs that shows distribution of date rankings
     labels = 'day', 'month', 'year', 'no date'
     sizes = [ranking_counter['day'], ranking_counter['month'], ranking_counter['year'], ranking_counter['nd']]
@@ -135,11 +158,12 @@ def analysis_1():
     plt.pie(sizes, explode=explode, labels=labels, colors=colors,
             autopct='%1.1f%%', shadow=True, startangle=140)
     plt.axis('equal')
+    plt.savefig("day.png")
     plt.show()
     pass
 
 
-def analysis_2():
+def analysis_addresses():
     # pie-graphs that shows distribution of address rankings
     labels = 'full address', 'part-known address', 'unknown address', 'no address'
     sizes = [ranking_counter['fa'], ranking_counter['pa'], ranking_counter['ua'], ranking_counter['na']]
@@ -148,8 +172,24 @@ def analysis_2():
     plt.pie(sizes, explode=explode, labels=labels, colors=colors,
             autopct='%1.1f%%', shadow=True, startangle=140)
     plt.axis('equal')
+    plt.savefig("address.png")
     plt.show()
     pass
+
+
+def analysis_countries():
+    objects = countries.keys
+    y_pos = np.arange(len(objects))
+    performance = countries.values()
+
+    plt.bar(y_pos, performance, align='center', alpha=0.5)
+    plt.xticks(y_pos, objects)
+
+    plt.title('Countries')
+    plt.savefig("country.png")
+    plt.show()
+    pass
+
 
 if __name__ == "__main__":
    main(sys.argv[1:])
